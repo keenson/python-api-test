@@ -1,0 +1,46 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI-CD-Pipeline-to AWS
+env:
+  EB_PACKAGE_S3_BUCKET_NAME : "flask-app-001" 
+  EB_APPLICATION_NAME       : "python-api-test"
+  EB_ENVIRONMENT_NAME       : "PythonApiTest-env"
+  DEPLOY_PACKAGE_NAME       : "python-app-${{ github.sha }}.zip"
+  AWS_REGION_NAME         :  "us-east-2"
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ main ]
+
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a single command using the runners shell
+      - name: create ZIP deployment package
+        run: zip -r ${{ env.DEPLOY_PACKAGE_NAME }} ./ -x *.git*
+
+      # Runs a set of commands using the runners shell
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id     : ${{ secrets.MY_AWS_ACCESS_KEY }} 
+          aws-secret-access-key : ${{ secrets.MY_AWS_SECRET_KEY }} 
+          aws-region            : ${{ env.AWS_REGION_NAME }}  
+          
+      - name: Copy our Deployment package to s3 bucket
+        run : aws s3 cp ${{ env.DEPLOY_PACKAGE_NAME }} s3://${{ EB_PACKAGE_S3_BUCKET_NAME }}/
+        
+      - name: Print message on completion of CI pipeline
+        run : echo "CI pipeline part finished successfully"
