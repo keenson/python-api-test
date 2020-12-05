@@ -17,8 +17,7 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
+  my_ci_pipeline: 
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
@@ -44,3 +43,37 @@ jobs:
         
       - name: Print message on completion of CI pipeline
         run : echo "CI pipeline part finished successfully"
+  
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+
+  my_cd_pipeline:     
+     runs-on: ubuntu-latest
+     needs: [my_ci_pipeline]
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+     steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+        
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id     : ${{ secrets.MY_AWS_ACCESS_KEY }} 
+          aws-secret-access-key : ${{ secrets.MY_AWS_SECRET_KEY }} 
+          aws-region            : ${{ env.AWS_REGION_NAME }}  
+          
+      - name: Create new ElasticBeanstalk Application Version
+        run : 
+         aws elasticbeanstalk create-application-version \
+         --application-name $ {{ env.EB_APPLICATION_NAME }} \
+         --source-bundle s3Bundle=S{{ env.EB_PACKAGE_S3_BUCKET_NAME }}",S3Key="{{ env.DEPLOY_PACKAGE_NAME }}"
+         --version-label "Ver-${{ github.sha }}"
+         --description "CommitSHA-${{ github.sha }}"
+          
+      - name: Deploy our new Appllication Version
+        run : aws elasticbeanstalk update-environment -- environment-name ${{ env.EB_ENVIRONMENT_NAME }} --version-label "Ver-${{ github.sha }}"
+      
+      - name: Print message on completion of CD pipeline
+        run : echo "CI pipeline part finished successfully"
+           
